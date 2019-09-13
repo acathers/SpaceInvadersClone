@@ -1,6 +1,5 @@
 package dev.kemikals;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -14,16 +13,26 @@ import javafx.scene.text.Text;
 
 public class Game {
 
-	Sprite player = new Sprite(300, 750, 40, 40, Color.BLUE, "player");
-	Scene scene;
-
-	List<Sprite> enemies;
+	private Sprite player = new Sprite(300, 750, 40, 40, Color.BLUE, "player");
+	private Scene scene;
+	private double enemyShootChance = 0.0001;
 
 	private int score = 0;
-	Text scoreText;
+	private Text scoreText;
+	private Text level;
+	private double time = 0;
 
 	private boolean moveLeft = true;
-	LocalDateTime lastMoved = LocalDateTime.now();
+	private double enemySpeed = 10;
+
+	AnimationTimer timer = new AnimationTimer() {
+
+		@Override
+		public void handle(long time) {
+			update();
+		}
+
+	};
 
 	public Game(Scene scene) {
 		this.scene = scene;
@@ -31,14 +40,7 @@ public class Game {
 
 	public void run() {
 
-		new AnimationTimer() {
-
-			@Override
-			public void handle(long time) {
-				update();
-			}
-
-		}.start();
+		timer.start();
 
 		drawContent();
 
@@ -77,6 +79,7 @@ public class Game {
 	}
 
 	private void update() {
+		time += 0.16;
 		sprites().forEach(s -> {
 			switch (s.getType()) {
 			case "playerbullet":
@@ -100,16 +103,30 @@ public class Game {
 				break;
 
 			case "enemy":
-				if (Math.random() < 0.0001) {
+				if (Math.random() < enemyShootChance) {
 					if (s.canShoot()) {
 						shoot(s);
 					}
 				}
-
 				break;
-
 			}
 		});
+
+		if (checkWin()) {
+			createEnemies();
+			moveLeft = true;
+			enemyShootChance += .0005;
+			enemySpeed -= 2;
+			int currentLevel = Integer.parseInt(level.getText());
+			level.setText(String.valueOf(currentLevel++));
+		}
+
+		if (sprites().stream().filter(Sprite::isEnemy)
+				.anyMatch(e -> e.getBoundsInParent().intersects(player.getBoundsInParent())) || !player.isAlive()) {
+			timer.stop();
+			((Pane) scene.getRoot()).getChildren()
+					.add(new Text(scene.getHeight() / 2, scene.getWidth() / 2, "YOU LOSE"));
+		}
 
 		List<Sprite> deadSprites = new ArrayList<>();
 		sprites().stream().filter(Predicate.not(Sprite::isAlive)).forEach(deadSprites::add);
@@ -119,7 +136,7 @@ public class Game {
 			scoreText.setText(String.valueOf(score += deadSprites.size() * 100));
 		}
 
-		if (lastMoved.plusSeconds(1).isBefore(LocalDateTime.now())) {
+		if (time > enemySpeed) {
 
 			if (moveLeft) {
 				moveAllEnemiesLeft();
@@ -132,7 +149,7 @@ public class Game {
 			if (!enemiesCanMoveLeft() || !enemiesCanMoveRight()) {
 				moveAllEnemiesDown();
 			}
-			lastMoved = LocalDateTime.now();
+			time = 0;
 		}
 
 	}
@@ -140,8 +157,7 @@ public class Game {
 	public void drawContent() {
 		topInfoBar(0);
 		createEnemies();
-		((Pane)scene.getRoot()).getChildren().add(player);
-
+		((Pane) scene.getRoot()).getChildren().add(player);
 	}
 
 	public void moveAllEnemiesLeft() {
@@ -153,10 +169,12 @@ public class Game {
 	}
 
 	public boolean enemiesCanMoveRight() {
-		List<Sprite> enemies = sprites().stream().filter(s -> s.isEnemy()).collect(Collectors.toList());
+		return sprites().stream().filter(s -> s.isEnemy()).mapToDouble(e -> e.getTranslateX()).max()
+				.getAsDouble() < scene.getWidth() - 30;
+	}
 
-		return enemies.stream().mapToDouble(e -> e.getTranslateX()).max().getAsDouble() < scene.getWidth() - 30;
-
+	public boolean checkWin() {
+		return sprites().stream().filter(s -> s.isEnemy()).allMatch(e -> !e.isAlive());
 	}
 
 	public void moveAllEnemiesRight() {
@@ -165,7 +183,6 @@ public class Game {
 
 	public void moveAllEnemiesDown() {
 		sprites().stream().filter(s -> s.isEnemy()).forEach(s -> s.moveDown((int) s.getHeight() * 2));
-
 	}
 
 	public void createEnemies() {
@@ -185,7 +202,10 @@ public class Game {
 	public void topInfoBar(int value) {
 		Text t = new Text(0, 20, "Score: ");
 		scoreText = new Text(t.getText().length() + 50, 20, String.valueOf(value));
-		((Pane) scene.getRoot()).getChildren().addAll(t, scoreText);
+		Text l = new Text(200, 20, "Level: ");
+		level = new Text(l.getX() + 50, 20, "1");
+
+		((Pane) scene.getRoot()).getChildren().addAll(t, scoreText,l,level);
 	}
 
 	private List<Sprite> sprites() {
@@ -198,8 +218,10 @@ public class Game {
 	}
 
 	public void shoot(Sprite sprite) {
-		Sprite projectile = new Sprite(sprite, 10, 5, Color.RED, "bullet");
-		((Pane) scene.getRoot()).getChildren().add(projectile);
+		if (sprite.isAlive()) {
+			Sprite projectile = new Sprite(sprite, 10, 5, Color.RED, "bullet");
+			((Pane) scene.getRoot()).getChildren().add(projectile);
+		}
 	}
 
 }

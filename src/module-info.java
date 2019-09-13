@@ -1,4 +1,4 @@
 module spaceinvaders {
 	requires transitive javafx.graphics;
-	exports dev.kemikals;
+  exports dev.kemikals;
 }

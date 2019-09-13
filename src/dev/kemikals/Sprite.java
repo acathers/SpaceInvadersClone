@@ -11,10 +11,10 @@ public class Sprite extends Rectangle implements Moveable {
 	private final static int INCREMENT = 10;
 	public String type;
 	public boolean alive = true;
-	
+
 	LocalDateTime timeLastShot = LocalDateTime.now();
-	
-	
+
+
 
 	public Sprite(double x, double y, double h, double w, Color color, String type) {
 		super(w, h, color);
@@ -22,6 +22,8 @@ public class Sprite extends Rectangle implements Moveable {
 		setTranslateX(x);
 		setTranslateY(y);
 	}
+
+
 
 	public Sprite(Sprite sprite, double h, double w, Color color, String type) {
 		this(sprite.getTranslateX()+sprite.getWidth() /2, sprite.getTranslateY(), h, w, color, createType(sprite, type));
@@ -59,7 +61,7 @@ public class Sprite extends Rectangle implements Moveable {
 		setTranslateY(getTranslateY() + INCREMENT);
 
 	}
-	
+
 	public void moveDown(int y) {
 		setTranslateY(getTranslateY() + y);
 
@@ -72,7 +74,7 @@ public class Sprite extends Rectangle implements Moveable {
 	public boolean isAlive() {
 		return alive;
 	}
-	
+
 	public boolean isEnemy() {
 		return type.equals("enemy");
 	}
@@ -80,9 +82,9 @@ public class Sprite extends Rectangle implements Moveable {
 	public void setAlive(boolean alive) {
 		this.alive = alive;
 	}
-	
+
 	public boolean canShoot() {
-		boolean canShoot = LocalDateTime.now().isAfter(timeLastShot.plusSeconds(3));
+		boolean canShoot = LocalDateTime.now().isAfter(timeLastShot.plusSeconds(1));
 		if(canShoot) {
 		timeLastShot = LocalDateTime.now();
 		}
